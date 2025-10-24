@@ -1,0 +1,2906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MicroNote | Modern Research Notebook</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366F1;
+            --primary-light: #818CF8;
+            --primary-dark: #4F46E5;
+            --secondary: #F59E0B;
+            --accent: #10B981;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --surface-elevated: #FFFFFF;
+            --text-primary: #1E293B;
+            --text-secondary: #64748B;
+            --text-light: #94A3B8;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+            --border: #E2E8F0;
+            --border-light: #F1F5F9;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --sidebar-width: 280px;
+            --notebook-color: #FEF3C7;
+            --glass: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --radius: 12px;
+            --radius-lg: 16px;
+        }
+
+        [data-theme="dark"] {
+            --primary: #818CF8;
+            --primary-light: #A5B4FC;
+            --primary-dark: #6366F1;
+            --secondary: #F59E0B;
+            --accent: #10B981;
+            --background: #0F172A;
+            --surface: #1E293B;
+            --surface-elevated: #334155;
+            --text-primary: #F1F5F9;
+            --text-secondary: #CBD5E1;
+            --text-light: #94A3B8;
+            --border: #334155;
+            --border-light: #475569;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+            --glass: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        body {
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+            display: flex;
+            min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .container {
+            width: 95%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--surface);
+            color: var(--text-primary);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            transition: all 0.3s;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow);
+            border-right: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+        
+        .sidebar-header {
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .sidebar-header .logo-icon {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .sidebar-header h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        
+        .sidebar-nav {
+            flex: 1;
+            padding: 1rem 0;
+            overflow-y: auto;
+        }
+        
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .nav-section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 0.5rem 1.5rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        
+        .nav-links {
+            list-style: none;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 1.5rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        .nav-link:hover::before {
+            left: 100%;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            background-color: rgba(99, 102, 241, 0.05);
+            border-left-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .nav-link i {
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        
+        .nav-link span {
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        
+        .notebook-list {
+            margin-top: 1rem;
+        }
+        
+        .notebook-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 8px;
+            margin: 0 0.5rem;
+        }
+        
+        .notebook-item:hover {
+            background-color: rgba(99, 102, 241, 0.05);
+        }
+        
+        .notebook-item.active {
+            background-color: rgba(99, 102, 241, 0.1);
+            border-left: 3px solid var(--primary);
+        }
+        
+        .notebook-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--notebook-color);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: var(--primary-dark);
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s;
+        }
+        
+        header {
+            background: var(--glass);
+            padding: 1rem 0;
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 99;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .page-title {
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .user-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .theme-toggle {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background: var(--primary);
+            color: white;
+            transform: rotate(15deg);
+        }
+        
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--surface);
+            padding: 8px 15px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid var(--border);
+        }
+        
+        .user-profile:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        main {
+            padding: 2rem 0;
+            flex: 1;
+        }
+        
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Card Styles */
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+        
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .card-title {
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-title i {
+            color: var(--primary);
+        }
+        
+        /* Notebook Layout */
+        .notebook-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            height: calc(100vh - 200px);
+        }
+        
+        @media (max-width: 1024px) {
+            .notebook-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .sources-panel {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            border: 1px solid var(--border);
+        }
+        
+        .notes-panel {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            border: 1px solid var(--border);
+        }
+        
+        /* Sources Styles */
+        .sources-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+        
+        .source-item {
+            padding: 1.25rem;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .source-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary);
+            transform: scaleY(0);
+            transition: transform 0.3s;
+        }
+        
+        .source-item:hover::before {
+            transform: scaleY(1);
+        }
+        
+        .source-item:hover {
+            border-color: var(--primary-light);
+            transform: translateY(-3px);
+        }
+        
+        .source-item.active {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .source-item.active::before {
+            transform: scaleY(1);
+        }
+        
+        .source-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .source-title i {
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+        
+        .source-meta {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .source-preview {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+        
+        .source-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        /* Notes Styles */
+        .notes-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+        
+        .note-item {
+            padding: 1.25rem;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            background: var(--surface);
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .note-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent);
+            transform: scaleY(0);
+            transition: transform 0.3s;
+        }
+        
+        .note-item:hover::before {
+            transform: scaleY(1);
+        }
+        
+        .note-item:hover {
+            border-color: var(--accent);
+            transform: translateY(-3px);
+        }
+        
+        .note-item.active {
+            border-color: var(--accent);
+            background: rgba(16, 185, 129, 0.05);
+        }
+        
+        .note-item.active::before {
+            transform: scaleY(1);
+        }
+        
+        .note-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .note-title i {
+            color: var(--accent);
+            font-size: 0.9rem;
+        }
+        
+        .note-date {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+        
+        .note-preview {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+        
+        .note-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .note-form {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+        }
+        
+        .note-form textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            resize: vertical;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+            transition: border 0.3s;
+            background: var(--surface);
+            color: var(--text-primary);
+        }
+        
+        .note-form textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+        }
+        
+        /* Button Styles */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #D97706;
+            transform: translateY(-2px);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+        
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+        
+        /* Input Styles */
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .input-group input,
+        .input-group textarea,
+        .input-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            background: var(--surface);
+            color: var(--text-primary);
+        }
+        
+        .input-group input:focus,
+        .input-group textarea:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+        }
+        
+        /* PDF Upload */
+        .pdf-upload {
+            border: 2px dashed var(--primary-light);
+            padding: 2.5rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(99, 102, 241, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pdf-upload::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .pdf-upload:hover::before {
+            opacity: 1;
+        }
+        
+        .pdf-upload:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+        }
+        
+        .pdf-upload i {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+        
+        .pdf-upload p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        
+        .pdf-upload.active {
+            border-color: var(--accent);
+            background: rgba(16, 185, 129, 0.05);
+        }
+        
+        /* AI Assistant */
+        .ai-assistant {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ai-assistant::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: translateX(-100%);
+        }
+        
+        .ai-assistant:hover::before {
+            animation: shimmer 1.5s infinite;
+        }
+        
+        @keyframes shimmer {
+            100% {
+                transform: translateX(100%);
+            }
+        }
+        
+        .ai-icon {
+            font-size: 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .ai-content {
+            flex: 1;
+        }
+        
+        .ai-content h3 {
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Chat Styles */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: var(--surface);
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+        }
+        
+        .message {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: var(--radius);
+            max-width: 80%;
+            animation: messageAppear 0.3s ease;
+        }
+        
+        @keyframes messageAppear {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.user {
+            background: var(--primary);
+            color: white;
+            margin-left: auto;
+        }
+        
+        .message.assistant {
+            background: var(--surface);
+            border: 1px solid var(--border);
+        }
+        
+        .message-citation {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border);
+        }
+        
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            background: var(--surface);
+            color: var(--text-primary);
+        }
+        
+        .chat-input button {
+            padding: 12px 20px;
+        }
+        
+        /* AI Features */
+        .ai-suggestion {
+            background: rgba(99, 102, 241, 0.05);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .ai-suggestion h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .ai-suggestion p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        /* Mind Map Styles */
+        .mind-map-container {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+        }
+        
+        .mind-map-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        
+        .mind-map-canvas {
+            flex: 1;
+            background: var(--surface);
+            border-radius: var(--radius);
+            overflow: hidden;
+            position: relative;
+            border: 1px solid var(--border);
+        }
+        
+        #mind-map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .mind-map-node {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .mind-map-node circle {
+            stroke-width: 2px;
+        }
+        
+        .mind-map-node text {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            pointer-events: none;
+        }
+        
+        .mind-map-link {
+            fill: none;
+            stroke: var(--border);
+            stroke-width: 2px;
+        }
+        
+        .mind-map-tooltip {
+            position: absolute;
+            padding: 10px;
+            background: var(--surface);
+            color: var(--text-primary);
+            border-radius: var(--radius);
+            font-size: 14px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+            max-width: 300px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary-light);
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--surface);
+            color: var(--text-primary);
+            padding: 12px 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            border: 1px solid var(--border);
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+        
+        .toast.error {
+            border-left: 4px solid var(--error);
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal.active {
+            display: flex;
+            animation: modalFadeIn 0.3s ease;
+        }
+        
+        @keyframes modalFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
+            animation: modalSlideIn 0.3s ease;
+        }
+        
+        @keyframes modalSlideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: color 0.3s;
+        }
+        
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 80px;
+            }
+            
+            .sidebar-header h1, 
+            .nav-link span,
+            .nav-section-title,
+            .notebook-item span {
+                display: none;
+            }
+            
+            .main-content {
+                margin-left: 80px;
+            }
+            
+            .notebook-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Modern Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--surface);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-light);
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon">
+                <i class="fas fa-microscope"></i>
+            </div>
+            <h1>MicroNote</h1>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <h3 class="nav-section-title">Notebooks</h3>
+                <ul class="nav-links">
+                    <li>
+                        <a href="#" class="nav-link active" data-section="notebook">
+                            <i class="fas fa-book"></i>
+                            <span>My Notebook</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="nav-link" data-section="sources">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Sources</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="nav-link" data-section="mind-map">
+                            <i class="fas fa-project-diagram"></i>
+                            <span>Mind Map</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="nav-link" data-section="ai-chat">
+                            <i class="fas fa-robot"></i>
+                            <span>AI Assistant</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="nav-section">
+                <h3 class="nav-section-title">My Notebooks</h3>
+                <div class="notebook-list">
+                    <div class="notebook-item active" data-notebook="microbial-genetics">
+                        <div class="notebook-icon">
+                            <i class="fas fa-bacteria"></i>
+                        </div>
+                        <span>Microbial Genetics</span>
+                    </div>
+                    <div class="notebook-item" data-notebook="virology">
+                        <div class="notebook-icon">
+                            <i class="fas fa-virus"></i>
+                        </div>
+                        <span>Virology</span>
+                    </div>
+                    <div class="notebook-item" data-notebook="immunology">
+                        <div class="notebook-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <span>Immunology</span>
+                    </div>
+                    <div class="notebook-item" data-notebook="antibiotics">
+                        <div class="notebook-icon">
+                            <i class="fas fa-pills"></i>
+                        </div>
+                        <span>Antibiotics</span>
+                    </div>
+                    <div class="notebook-item" id="new-notebook-btn">
+                        <div class="notebook-icon">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                        <span>New Notebook</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <header>
+            <div class="container">
+                <div class="header-content">
+                    <h1 class="page-title" id="page-title">Microbial Genetics Notebook</h1>
+                    <div class="user-actions">
+                        <div class="theme-toggle" id="theme-toggle">
+                            <i class="fas fa-moon"></i>
+                        </div>
+                        <div class="user-profile">
+                            <div class="user-avatar">JD</div>
+                            <span>John Doe</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+            <div class="container">
+                <!-- Notebook Section -->
+                <section id="notebook-section" class="section active">
+                    <div class="ai-assistant">
+                        <div class="ai-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="ai-content">
+                            <h3>Microbiology Research Assistant</h3>
+                            <p>I'm ready to help you explore your sources and create notes. Ask me questions about your research or request summaries of key concepts.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="notebook-layout">
+                        <div class="sources-panel">
+                            <div class="card-header">
+                                <h2 class="card-title"><i class="fas fa-file-alt"></i> Sources</h2>
+                                <button class="btn btn-primary btn-small" id="add-source"><i class="fas fa-plus"></i> Add Source</button>
+                            </div>
+                            
+                            <div class="pdf-upload" id="source-pdf-upload">
+                                <i class="fas fa-file-upload"></i>
+                                <p>Drag & drop a PDF file here or click to browse</p>
+                                <p class="small-text">Add research papers, textbooks, or articles</p>
+                                <input type="file" id="source-pdf-file" accept=".pdf" style="display: none;">
+                            </div>
+                            
+                            <div class="sources-list" id="sources-list">
+                                <!-- Sources will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <div class="notes-panel">
+                            <div class="card-header">
+                                <h2 class="card-title"><i class="fas fa-sticky-note"></i> Notes</h2>
+                                <button class="btn btn-primary btn-small" id="new-note"><i class="fas fa-plus"></i> New Note</button>
+                            </div>
+                            
+                            <div class="notes-list" id="notes-list">
+                                <!-- Notes will be loaded here -->
+                            </div>
+                            
+                            <div class="note-form">
+                                <div class="input-group">
+                                    <label for="note-title">Note Title</label>
+                                    <input type="text" id="note-title" placeholder="Enter note title">
+                                </div>
+                                <div class="input-group">
+                                    <label for="note-content">Note Content</label>
+                                    <textarea id="note-content" placeholder="Type your notes here..."></textarea>
+                                </div>
+                                <div class="ai-suggestion">
+                                    <h4><i class="fas fa-lightbulb"></i> AI Suggestion</h4>
+                                    <p id="ai-suggestion-text">Based on your sources, I can help you summarize key concepts or generate study questions.</p>
+                                </div>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button class="btn btn-primary" id="save-note"><i class="fas fa-save"></i> Save Note</button>
+                                    <button class="btn btn-secondary" id="ai-summarize"><i class="fas fa-robot"></i> AI Summarize</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Sources Section -->
+                <section id="sources-section" class="section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fas fa-file-alt"></i> Source Management</h2>
+                            <button class="btn btn-primary" id="add-source-full"><i class="fas fa-plus"></i> Add Source</button>
+                        </div>
+                        
+                        <div class="pdf-upload" id="sources-pdf-upload">
+                            <i class="fas fa-file-upload"></i>
+                            <p>Drag & drop PDF files here or click to browse</p>
+                            <p class="small-text">Add research papers, textbooks, or articles to your notebook</p>
+                            <input type="file" id="sources-pdf-file" accept=".pdf" style="display: none;" multiple>
+                        </div>
+                        
+                        <div class="sources-list" id="full-sources-list">
+                            <!-- All sources will be loaded here -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Mind Map Section -->
+                <section id="mind-map-section" class="section">
+                    <div class="mind-map-container">
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fas fa-project-diagram"></i> Research Mind Map</h2>
+                            <div class="mind-map-controls">
+                                <button class="btn btn-primary btn-small" id="generate-mind-map">
+                                    <i class="fas fa-sync-alt"></i> Regenerate Map
+                                </button>
+                                <button class="btn btn-outline btn-small" id="auto-layout">
+                                    <i class="fas fa-network-wired"></i> Auto Layout
+                                </button>
+                                <button class="btn btn-outline btn-small" id="export-mind-map">
+                                    <i class="fas fa-download"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mind-map-canvas">
+                            <div id="mind-map"></div>
+                            <div class="mind-map-tooltip" id="mind-map-tooltip"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- AI Chat Section -->
+                <section id="ai-chat-section" class="section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fas fa-robot"></i> AI Research Assistant</h2>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-outline btn-small" id="clear-chat"><i class="fas fa-broom"></i> Clear Chat</button>
+                                <button class="btn btn-outline btn-small" id="suggest-questions"><i class="fas fa-question"></i> Suggest Questions</button>
+                            </div>
+                        </div>
+                        
+                        <div class="ai-suggestion">
+                            <h4><i class="fas fa-info-circle"></i> Source-Grounded AI</h4>
+                            <p>I'll answer your questions based only on the sources you've added to your notebook. This ensures accurate, relevant information for your research.</p>
+                        </div>
+                        
+                        <div class="chat-container">
+                            <div class="chat-messages" id="chat-messages">
+                                <div class="message assistant">
+                                    <p>Hello! I'm your microbiology research assistant. I can help you understand concepts from your sources, summarize key points, or answer specific questions about your research.</p>
+                                    <p>What would you like to know about your microbial genetics research?</p>
+                                </div>
+                            </div>
+                            
+                            <div class="chat-input">
+                                <input type="text" id="chat-input" placeholder="Ask a question about your research...">
+                                <button class="btn btn-primary" id="send-message"><i class="fas fa-paper-plane"></i> Send</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <footer>
+            <div class="container">
+                <p>MicroNote &copy; 2023 | Modern Microbiology Research Notebook</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Source Modal -->
+    <div class="modal" id="source-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Source</h2>
+                <button class="modal-close" id="close-source-modal">&times;</button>
+            </div>
+            <div class="input-group">
+                <label for="source-title">Source Title</label>
+                <input type="text" id="source-title" placeholder="Enter source title">
+            </div>
+            <div class="input-group">
+                <label for="source-content">Source Content</label>
+                <textarea id="source-content" placeholder="Paste source content or upload a PDF..." rows="10"></textarea>
+            </div>
+            <div class="input-group">
+                <label for="source-citations">Key Citations (one per line)</label>
+                <textarea id="source-citations" placeholder="Enter key citations from this source..." rows="4"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-outline" id="cancel-source">Cancel</button>
+                <button class="btn btn-primary" id="save-source">Save Source</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notebook Modal -->
+    <div class="modal" id="notebook-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Create New Notebook</h2>
+                <button class="modal-close" id="close-notebook-modal">&times;</button>
+            </div>
+            <div class="input-group">
+                <label for="notebook-name">Notebook Name</label>
+                <input type="text" id="notebook-name" placeholder="Enter notebook name">
+            </div>
+            <div class="input-group">
+                <label for="notebook-topic">Topic/Field</label>
+                <select id="notebook-topic">
+                    <option value="microbial-genetics">Microbial Genetics</option>
+                    <option value="virology">Virology</option>
+                    <option value="immunology">Immunology</option>
+                    <option value="antibiotics">Antibiotics</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-outline" id="cancel-notebook">Cancel</button>
+                <button class="btn btn-primary" id="save-notebook">Create Notebook</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toast-message">Operation completed successfully!</span>
+    </div>
+
+    <script>
+        // Set up PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        // Application state
+        const state = {
+            currentNotebook: 'microbial-genetics',
+            notebooks: {
+                'microbial-genetics': {
+                    id: 'microbial-genetics',
+                    name: 'Microbial Genetics',
+                    sources: [],
+                    notes: []
+                },
+                'virology': {
+                    id: 'virology',
+                    name: 'Virology',
+                    sources: [],
+                    notes: []
+                },
+                'immunology': {
+                    id: 'immunology',
+                    name: 'Immunology',
+                    sources: [],
+                    notes: []
+                },
+                'antibiotics': {
+                    id: 'antibiotics',
+                    name: 'Antibiotics',
+                    sources: [],
+                    notes: []
+                }
+            },
+            currentSourceId: null,
+            currentNoteId: null,
+            mindMapData: null
+        };
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initApp();
+        });
+
+        function initApp() {
+            // Load any saved data from localStorage
+            loadFromLocalStorage();
+            
+            // Initialize theme
+            initTheme();
+            
+            // Render initial data
+            renderSources();
+            renderNotes();
+            setupEventListeners();
+            setupPdfUpload();
+            
+            // Generate initial mind map
+            generateMindMap();
+        }
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('microNoteTheme') || 'light';
+            document.body.setAttribute('data-theme', savedTheme);
+            
+            const themeIcon = document.querySelector('#theme-toggle i');
+            if (savedTheme === 'dark') {
+                themeIcon.className = 'fas fa-sun';
+            } else {
+                themeIcon.className = 'fas fa-moon';
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.body.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('microNoteTheme', newTheme);
+            
+            const themeIcon = document.querySelector('#theme-toggle i');
+            if (newTheme === 'dark') {
+                themeIcon.className = 'fas fa-sun';
+            } else {
+                themeIcon.className = 'fas fa-moon';
+            }
+        }
+
+        function setupEventListeners() {
+            // Navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const sectionId = this.getAttribute('data-section') + '-section';
+                    
+                    // Update active nav link
+                    document.querySelectorAll('.nav-link').forEach(nl => nl.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Show selected section
+                    document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+                    document.getElementById(sectionId).classList.add('active');
+                    
+                    // Update page title
+                    const sectionName = this.querySelector('span').textContent;
+                    document.getElementById('page-title').textContent = sectionName;
+                    
+                    // If switching to mind map, regenerate it
+                    if (sectionId === 'mind-map-section') {
+                        generateMindMap();
+                    }
+                });
+            });
+
+            // Theme toggle
+            document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+            // Notebook selection
+            document.querySelectorAll('.notebook-item').forEach(item => {
+                if (item.id !== 'new-notebook-btn') {
+                    item.addEventListener('click', function() {
+                        const notebookId = this.getAttribute('data-notebook');
+                        switchNotebook(notebookId);
+                    });
+                }
+            });
+
+            // New notebook button
+            document.getElementById('new-notebook-btn').addEventListener('click', function() {
+                document.getElementById('notebook-modal').classList.add('active');
+            });
+
+            // Notes functionality
+            document.getElementById('save-note').addEventListener('click', saveNote);
+            document.getElementById('new-note').addEventListener('click', createNewNote);
+            document.getElementById('ai-summarize').addEventListener('click', aiSummarize);
+
+            // Sources functionality
+            document.getElementById('add-source').addEventListener('click', showAddSourceModal);
+            document.getElementById('add-source-full').addEventListener('click', showAddSourceModal);
+
+            // Source modal functionality
+            document.getElementById('close-source-modal').addEventListener('click', closeSourceModal);
+            document.getElementById('cancel-source').addEventListener('click', closeSourceModal);
+            document.getElementById('save-source').addEventListener('click', saveSource);
+
+            // Notebook modal functionality
+            document.getElementById('close-notebook-modal').addEventListener('click', closeNotebookModal);
+            document.getElementById('cancel-notebook').addEventListener('click', closeNotebookModal);
+            document.getElementById('save-notebook').addEventListener('click', saveNotebook);
+
+            // Mind Map functionality
+            document.getElementById('generate-mind-map').addEventListener('click', generateMindMap);
+            document.getElementById('auto-layout').addEventListener('click', autoLayoutMindMap);
+            document.getElementById('export-mind-map').addEventListener('click', exportMindMap);
+
+            // AI Chat functionality
+            document.getElementById('send-message').addEventListener('click', sendMessage);
+            document.getElementById('clear-chat').addEventListener('click', clearChat);
+            document.getElementById('suggest-questions').addEventListener('click', suggestQuestions);
+            
+            // Enter key for chat
+            document.getElementById('chat-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        }
+
+        function switchNotebook(notebookId) {
+            if (state.notebooks[notebookId]) {
+                state.currentNotebook = notebookId;
+                
+                // Update active notebook in UI
+                document.querySelectorAll('.notebook-item').forEach(item => {
+                    item.classList.remove('active');
+                    if (item.getAttribute('data-notebook') === notebookId) {
+                        item.classList.add('active');
+                    }
+                });
+                
+                // Update page title
+                document.getElementById('page-title').textContent = state.notebooks[notebookId].name + ' Notebook';
+                
+                // Render sources and notes for the new notebook
+                renderSources();
+                renderNotes();
+                
+                // Regenerate mind map
+                generateMindMap();
+                
+                showToast(`Switched to ${state.notebooks[notebookId].name} notebook`);
+                
+                // Save to localStorage
+                saveToLocalStorage();
+            }
+        }
+
+        // PDF Upload Setup
+        function setupPdfUpload() {
+            const pdfUploadArea = document.getElementById('source-pdf-upload');
+            const pdfFileInput = document.getElementById('source-pdf-file');
+            
+            if (!pdfUploadArea || !pdfFileInput) {
+                console.error('PDF upload elements not found');
+                return;
+            }
+            
+            pdfUploadArea.addEventListener('click', function() {
+                pdfFileInput.click();
+            });
+            
+            pdfUploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('active');
+            });
+            
+            pdfUploadArea.addEventListener('dragleave', function() {
+                this.classList.remove('active');
+            });
+            
+            pdfUploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('active');
+                
+                if (e.dataTransfer.files.length) {
+                    pdfFileInput.files = e.dataTransfer.files;
+                    handlePdfUpload(pdfFileInput.files[0]);
+                }
+            });
+            
+            pdfFileInput.addEventListener('change', function() {
+                if (this.files.length) {
+                    handlePdfUpload(this.files[0]);
+                }
+            });
+        }
+
+        async function handlePdfUpload(file) {
+            if (file.type !== 'application/pdf') {
+                showToast('Please select a PDF file.', 'error');
+                return;
+            }
+            
+            // Show loading state
+            showToast('Processing PDF...');
+            
+            try {
+                // Extract text from PDF
+                const text = await extractTextFromPDF(file);
+                
+                // Create a new source
+                const newSource = {
+                    id: Date.now().toString(),
+                    title: file.name.replace('.pdf', ''),
+                    type: 'pdf',
+                    content: text,
+                    date: new Date().toISOString(),
+                    citations: extractKeySentences(text)
+                };
+                
+                // Add to current notebook
+                state.notebooks[state.currentNotebook].sources.push(newSource);
+                
+                // Refresh sources display
+                renderSources();
+                
+                // Regenerate mind map to include new source
+                generateMindMap();
+                
+                showToast('PDF added to sources successfully!');
+                
+                // Save to localStorage
+                saveToLocalStorage();
+            } catch (error) {
+                console.error('Error processing PDF:', error);
+                showToast('Error processing PDF. Please try another file.', 'error');
+            }
+        }
+
+        async function extractTextFromPDF(file) {
+            return new Promise((resolve, reject) => {
+                const fileReader = new FileReader();
+                
+                fileReader.onload = async function() {
+                    try {
+                        const typedArray = new Uint8Array(this.result);
+                        const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                        let fullText = '';
+                        
+                        // Extract text from each page
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            const pageText = textContent.items.map(item => item.str).join(' ');
+                            fullText += pageText + '\n';
+                        }
+                        
+                        resolve(fullText);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                
+                fileReader.onerror = function() {
+                    reject(new Error('Failed to read file'));
+                };
+                
+                fileReader.readAsArrayBuffer(file);
+            });
+        }
+
+        function extractKeySentences(text) {
+            // Simple algorithm to extract key sentences
+            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            const keySentences = [];
+            
+            // Look for sentences with important keywords
+            const keywords = ['conclusion', 'results', 'method', 'finding', 'significant', 'important', 'key', 'primary', 'major'];
+            
+            for (let sentence of sentences) {
+                const lowerSentence = sentence.toLowerCase();
+                if (keywords.some(keyword => lowerSentence.includes(keyword)) && 
+                    sentence.split(' ').length > 5 && 
+                    sentence.split(' ').length < 30) {
+                    keySentences.push(sentence.trim());
+                    if (keySentences.length >= 3) break;
+                }
+            }
+            
+            // If we didn't find enough key sentences, take the first few
+            if (keySentences.length < 3) {
+                for (let i = 0; i < Math.min(3, sentences.length); i++) {
+                    if (!keySentences.includes(sentences[i].trim()) && sentences[i].split(' ').length > 5) {
+                        keySentences.push(sentences[i].trim());
+                    }
+                }
+            }
+            
+            return keySentences;
+        }
+
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            
+            toastMessage.textContent = message;
+            toast.className = 'toast';
+            toast.classList.add(type, 'show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Sources Functions
+        function renderSources() {
+            const sourcesList = document.getElementById('sources-list');
+            const fullSourcesList = document.getElementById('full-sources-list');
+            
+            const notebook = state.notebooks[state.currentNotebook];
+            
+            if (notebook.sources.length === 0) {
+                const emptyState = `
+                    <div class="empty-state">
+                        <i class="fas fa-file-alt"></i>
+                        <h3>No sources yet</h3>
+                        <p>Add your first source to get started with research</p>
+                    </div>
+                `;
+                if (sourcesList) sourcesList.innerHTML = emptyState;
+                if (fullSourcesList) fullSourcesList.innerHTML = emptyState;
+                return;
+            }
+            
+            const sourcesHTML = notebook.sources.map(source => `
+                <div class="source-item ${source.id === state.currentSourceId ? 'active' : ''}" data-id="${source.id}">
+                    <div class="source-title"><i class="fas fa-file-pdf"></i> ${source.title}</div>
+                    <div class="source-meta"><i class="far fa-calendar"></i> ${formatDate(source.date)}</div>
+                    <div class="source-preview">${source.content.substring(0, 150)}...</div>
+                    <div class="source-actions">
+                        <button class="btn btn-primary btn-small view-source"><i class="fas fa-eye"></i> View</button>
+                        <button class="btn btn-outline btn-small link-note"><i class="fas fa-link"></i> Link to Note</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            if (sourcesList) sourcesList.innerHTML = sourcesHTML;
+            if (fullSourcesList) fullSourcesList.innerHTML = sourcesHTML;
+            
+            // Add event listeners to source items
+            document.querySelectorAll('.source-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const sourceId = this.getAttribute('data-id');
+                    loadSource(sourceId);
+                });
+            });
+            
+            document.querySelectorAll('.view-source').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const sourceId = this.closest('.source-item').getAttribute('data-id');
+                    viewSource(sourceId);
+                });
+            });
+            
+            document.querySelectorAll('.link-note').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const sourceId = this.closest('.source-item').getAttribute('data-id');
+                    linkSourceToNote(sourceId);
+                });
+            });
+        }
+
+        function loadSource(sourceId) {
+            const source = state.notebooks[state.currentNotebook].sources.find(s => s.id === sourceId);
+            if (source) {
+                state.currentSourceId = sourceId;
+                
+                // Update active source in lists
+                document.querySelectorAll('.source-item').forEach(item => {
+                    item.classList.remove('active');
+                    if (item.getAttribute('data-id') === sourceId) {
+                        item.classList.add('active');
+                    }
+                });
+                
+                // Update AI suggestion based on the source
+                updateAISuggestion(source);
+                
+                showToast(`Selected source: ${source.title}`);
+            }
+        }
+
+        function viewSource(sourceId) {
+            const source = state.notebooks[state.currentNotebook].sources.find(s => s.id === sourceId);
+            if (source) {
+                // Show source content in a modal
+                alert(`Viewing source: ${source.title}\n\n${source.content.substring(0, 500)}...`);
+            }
+        }
+
+        function linkSourceToNote(sourceId) {
+            if (!state.currentNoteId) {
+                showToast('Please create or select a note first.', 'error');
+                return;
+            }
+            
+            const source = state.notebooks[state.currentNotebook].sources.find(s => s.id === sourceId);
+            const note = state.notebooks[state.currentNotebook].notes.find(n => n.id === state.currentNoteId);
+            
+            if (source && note) {
+                // Add source to note's linked sources if not already linked
+                if (!note.linkedSources) {
+                    note.linkedSources = [];
+                }
+                
+                if (!note.linkedSources.includes(sourceId)) {
+                    note.linkedSources.push(sourceId);
+                    showToast(`Linked "${source.title}" to note`);
+                    
+                    // Regenerate mind map to show new connection
+                    generateMindMap();
+                    
+                    // Save to localStorage
+                    saveToLocalStorage();
+                } else {
+                    showToast('Source already linked to this note', 'error');
+                }
+            }
+        }
+
+        function showAddSourceModal() {
+            document.getElementById('source-modal').classList.add('active');
+        }
+
+        function closeSourceModal() {
+            document.getElementById('source-modal').classList.remove('active');
+            // Clear form
+            document.getElementById('source-title').value = '';
+            document.getElementById('source-content').value = '';
+            document.getElementById('source-citations').value = '';
+        }
+
+        function saveSource() {
+            const title = document.getElementById('source-title').value;
+            const content = document.getElementById('source-content').value;
+            const citationsText = document.getElementById('source-citations').value;
+            
+            if (!title || !content) {
+                showToast('Please enter both title and content for your source.', 'error');
+                return;
+            }
+            
+            const citations = citationsText.split('\n').filter(c => c.trim() !== '');
+            
+            const newSource = {
+                id: Date.now().toString(),
+                title: title,
+                type: 'text',
+                content: content,
+                date: new Date().toISOString(),
+                citations: citations.length > 0 ? citations : extractKeySentences(content)
+            };
+            
+            state.notebooks[state.currentNotebook].sources.push(newSource);
+            renderSources();
+            generateMindMap();
+            showToast('Source added successfully!');
+            closeSourceModal();
+            
+            // Save to localStorage
+            saveToLocalStorage();
+        }
+
+        function closeNotebookModal() {
+            document.getElementById('notebook-modal').classList.remove('active');
+            // Clear form
+            document.getElementById('notebook-name').value = '';
+            document.getElementById('notebook-topic').value = 'microbial-genetics';
+        }
+
+        function saveNotebook() {
+            const name = document.getElementById('notebook-name').value;
+            const topic = document.getElementById('notebook-topic').value;
+            
+            if (!name) {
+                showToast('Please enter a name for your notebook.', 'error');
+                return;
+            }
+            
+            const notebookId = name.toLowerCase().replace(/\s+/g, '-');
+            
+            // Check if notebook already exists
+            if (state.notebooks[notebookId]) {
+                showToast('A notebook with this name already exists.', 'error');
+                return;
+            }
+            
+            // Create new notebook
+            state.notebooks[notebookId] = {
+                id: notebookId,
+                name: name,
+                sources: [],
+                notes: []
+            };
+            
+            // Add to UI
+            const notebookList = document.querySelector('.notebook-list');
+            const newNotebookHTML = `
+                <div class="notebook-item" data-notebook="${notebookId}">
+                    <div class="notebook-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <span>${name}</span>
+                </div>
+            `;
+            
+            // Insert before the "New Notebook" button
+            const newNotebookBtn = document.getElementById('new-notebook-btn');
+            newNotebookBtn.insertAdjacentHTML('beforebegin', newNotebookHTML);
+            
+            // Add event listener to the new notebook
+            document.querySelector(`[data-notebook="${notebookId}"]`).addEventListener('click', function() {
+                switchNotebook(notebookId);
+            });
+            
+            showToast(`Notebook "${name}" created successfully!`);
+            closeNotebookModal();
+            
+            // Save to localStorage
+            saveToLocalStorage();
+        }
+
+        // Notes Functions
+        function renderNotes() {
+            const notesList = document.getElementById('notes-list');
+            
+            const notebook = state.notebooks[state.currentNotebook];
+            
+            if (notebook.notes.length === 0) {
+                const emptyState = `
+                    <div class="empty-state">
+                        <i class="fas fa-sticky-note"></i>
+                        <h3>No notes yet</h3>
+                        <p>Create your first note to get started!</p>
+                    </div>
+                `;
+                if (notesList) notesList.innerHTML = emptyState;
+                return;
+            }
+            
+            const notesHTML = notebook.notes.map(note => `
+                <div class="note-item ${note.id === state.currentNoteId ? 'active' : ''}" data-id="${note.id}">
+                    <div class="note-title"><i class="fas fa-file-alt"></i> ${note.title}</div>
+                    <div class="note-date"><i class="far fa-clock"></i> ${formatDate(note.date)}</div>
+                    <div class="note-preview">${note.content.substring(0, 100)}${note.content.length > 100 ? '...' : ''}</div>
+                    <div class="note-actions">
+                        <button class="btn btn-primary btn-small edit-note"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="btn btn-outline btn-small delete-note"><i class="fas fa-trash"></i> Delete</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            if (notesList) notesList.innerHTML = notesHTML;
+            
+            // Add event listeners to note items
+            document.querySelectorAll('.note-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const noteId = this.getAttribute('data-id');
+                    loadNote(noteId);
+                });
+            });
+            
+            document.querySelectorAll('.edit-note').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const noteId = this.closest('.note-item').getAttribute('data-id');
+                    loadNote(noteId);
+                });
+            });
+            
+            document.querySelectorAll('.delete-note').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const noteId = this.closest('.note-item').getAttribute('data-id');
+                    deleteNote(noteId);
+                });
+            });
+        }
+
+        function loadNote(noteId) {
+            const note = state.notebooks[state.currentNotebook].notes.find(n => n.id === noteId);
+            if (note) {
+                state.currentNoteId = noteId;
+                
+                document.getElementById('note-title').value = note.title;
+                document.getElementById('note-content').value = note.content;
+                
+                // Update active note in lists
+                document.querySelectorAll('.note-item').forEach(item => {
+                    item.classList.remove('active');
+                    if (item.getAttribute('data-id') === noteId) {
+                        item.classList.add('active');
+                    }
+                });
+                
+                // Update AI suggestion based on the note
+                updateAISuggestion(null, note);
+            }
+        }
+
+        function deleteNote(noteId) {
+            if (confirm('Are you sure you want to delete this note?')) {
+                const notebook = state.notebooks[state.currentNotebook];
+                const noteIndex = notebook.notes.findIndex(note => note.id === noteId);
+                
+                if (noteIndex !== -1) {
+                    notebook.notes.splice(noteIndex, 1);
+                    
+                    // If we're currently editing this note, clear the form
+                    if (state.currentNoteId === noteId) {
+                        state.currentNoteId = null;
+                        document.getElementById('note-title').value = '';
+                        document.getElementById('note-content').value = '';
+                    }
+                    
+                    // Refresh notes display
+                    renderNotes();
+                    
+                    // Regenerate mind map
+                    generateMindMap();
+                    
+                    showToast('Note deleted successfully!');
+                    
+                    // Save to localStorage
+                    saveToLocalStorage();
+                }
+            }
+        }
+
+        function saveNote() {
+            const title = document.getElementById('note-title').value;
+            const content = document.getElementById('note-content').value;
+            
+            if (!title || !content) {
+                showToast('Please enter both title and content for your note.', 'error');
+                return;
+            }
+            
+            const notebook = state.notebooks[state.currentNotebook];
+            
+            const noteData = {
+                id: state.currentNoteId || Date.now().toString(),
+                title,
+                content,
+                date: new Date().toISOString(),
+                linkedSources: []
+            };
+            
+            if (state.currentNoteId) {
+                // Update existing note
+                const index = notebook.notes.findIndex(note => note.id === state.currentNoteId);
+                if (index !== -1) {
+                    // Preserve linked sources
+                    noteData.linkedSources = notebook.notes[index].linkedSources || [];
+                    notebook.notes[index] = noteData;
+                    showToast('Note updated successfully!');
+                }
+            } else {
+                // Add new note
+                notebook.notes.push(noteData);
+                showToast('Note saved successfully!');
+            }
+            
+            // Refresh notes display
+            renderNotes();
+            
+            // Regenerate mind map
+            generateMindMap();
+            
+            // Clear form if it's a new note
+            if (!state.currentNoteId) {
+                document.getElementById('note-title').value = '';
+                document.getElementById('note-content').value = '';
+            }
+            
+            state.currentNoteId = null;
+            
+            // Save to localStorage
+            saveToLocalStorage();
+        }
+
+        function createNewNote() {
+            state.currentNoteId = null;
+            document.getElementById('note-title').value = '';
+            document.getElementById('note-content').value = '';
+            
+            // Update AI suggestion
+            document.getElementById('ai-suggestion-text').textContent = 
+                'Based on your sources, I can help you summarize key concepts or generate study questions.';
+            
+            showToast('Ready to create a new note!');
+        }
+
+        function updateAISuggestion(source = null, note = null) {
+            let suggestion = 'Based on your sources, I can help you summarize key concepts or generate study questions.';
+            
+            if (source) {
+                suggestion = `I see you're looking at "${source.title}". I can help you summarize this source or answer questions about it.`;
+            } else if (note) {
+                suggestion = `I see you're editing "${note.title}". I can help you improve this note or connect it to relevant sources.`;
+            }
+            
+            document.getElementById('ai-suggestion-text').textContent = suggestion;
+        }
+
+        function aiSummarize() {
+            const content = document.getElementById('note-content').value;
+            
+            if (!content) {
+                showToast('Please enter some content to summarize.', 'error');
+                return;
+            }
+            
+            // Show loading state
+            showToast('AI is summarizing your note...');
+            
+            // Simple summarization algorithm
+            setTimeout(() => {
+                const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+                let summary = '';
+                
+                // Take the first sentence and a few key sentences
+                if (sentences.length > 0) {
+                    summary = sentences[0].trim();
+                    
+                    // Look for key sentences (those with important words)
+                    const keyWords = ['important', 'key', 'conclusion', 'finding', 'result', 'significantly'];
+                    let keySentenceCount = 0;
+                    
+                    for (let i = 1; i < sentences.length && keySentenceCount < 2; i++) {
+                        const sentence = sentences[i].toLowerCase();
+                        if (keyWords.some(word => sentence.includes(word)) && 
+                            sentences[i].split(' ').length > 5) {
+                            summary += ' ' + sentences[i].trim();
+                            keySentenceCount++;
+                        }
+                    }
+                    
+                    // If we didn't find key sentences, take the next couple of sentences
+                    if (keySentenceCount === 0 && sentences.length > 1) {
+                        for (let i = 1; i < Math.min(3, sentences.length); i++) {
+                            summary += ' ' + sentences[i].trim();
+                        }
+                    }
+                }
+                
+                // Append the summary to the note
+                const newContent = content + '\n\n---\nAI Summary:\n' + summary;
+                document.getElementById('note-content').value = newContent;
+                
+                showToast('AI summary added to your note!');
+            }, 1500);
+        }
+
+        // Mind Map Functions
+        function generateMindMap() {
+            const notebook = state.notebooks[state.currentNotebook];
+            
+            // Clear existing mind map
+            d3.select("#mind-map").selectAll("*").remove();
+            
+            // If no content, show empty state
+            if (notebook.sources.length === 0 && notebook.notes.length === 0) {
+                d3.select("#mind-map")
+                    .append("div")
+                    .attr("class", "empty-state")
+                    .html(`
+                        <i class="fas fa-project-diagram"></i>
+                        <h3>No content to visualize</h3>
+                        <p>Add sources and notes to generate a mind map</p>
+                    `);
+                return;
+            }
+            
+            // Build mind map data
+            const nodes = [];
+            const links = [];
+            
+            // Add notebook as central node
+            const notebookNode = {
+                id: 'notebook',
+                name: notebook.name,
+                type: 'notebook',
+                size: 40,
+                color: '#6366F1'
+            };
+            nodes.push(notebookNode);
+            
+            // Add sources as nodes
+            notebook.sources.forEach(source => {
+                const sourceNode = {
+                    id: `source-${source.id}`,
+                    name: source.title,
+                    type: 'source',
+                    size: 30,
+                    color: '#10B981',
+                    data: source
+                };
+                nodes.push(sourceNode);
+                
+                // Link source to notebook
+                links.push({
+                    source: 'notebook',
+                    target: `source-${source.id}`,
+                    type: 'contains'
+                });
+            });
+            
+            // Add notes as nodes
+            notebook.notes.forEach(note => {
+                const noteNode = {
+                    id: `note-${note.id}`,
+                    name: note.title,
+                    type: 'note',
+                    size: 25,
+                    color: '#F59E0B',
+                    data: note
+                };
+                nodes.push(noteNode);
+                
+                // Link note to notebook
+                links.push({
+                    source: 'notebook',
+                    target: `note-${note.id}`,
+                    type: 'contains'
+                });
+                
+                // Link note to sources if applicable
+                if (note.linkedSources && note.linkedSources.length > 0) {
+                    note.linkedSources.forEach(sourceId => {
+                        links.push({
+                            source: `note-${note.id}`,
+                            target: `source-${sourceId}`,
+                            type: 'references'
+                        });
+                    });
+                }
+            });
+            
+            // Extract concepts from notes and sources
+            const concepts = extractConcepts(notebook);
+            concepts.forEach(concept => {
+                const conceptNode = {
+                    id: `concept-${concept.id}`,
+                    name: concept.name,
+                    type: 'concept',
+                    size: 20,
+                    color: '#8B5CF6'
+                };
+                nodes.push(conceptNode);
+                
+                // Link concept to relevant nodes
+                concept.relatedNodes.forEach(nodeId => {
+                    links.push({
+                        source: nodeId,
+                        target: `concept-${concept.id}`,
+                        type: 'related'
+                    });
+                });
+            });
+            
+            // Store mind map data
+            state.mindMapData = { nodes, links };
+            
+            // Render the mind map
+            renderMindMap(nodes, links);
+        }
+        
+        function extractConcepts(notebook) {
+            const concepts = [];
+            const conceptMap = {};
+            
+            // Extract concepts from sources
+            notebook.sources.forEach(source => {
+                const words = source.content.split(/\s+/);
+                words.forEach(word => {
+                    // Simple concept extraction - look for capitalized words (potential proper nouns)
+                    if (word.length > 5 && /^[A-Z]/.test(word)) {
+                        const cleanWord = word.replace(/[^a-zA-Z]/g, '');
+                        if (cleanWord.length > 3) {
+                            if (!conceptMap[cleanWord]) {
+                                conceptMap[cleanWord] = {
+                                    id: cleanWord.toLowerCase(),
+                                    name: cleanWord,
+                                    count: 0,
+                                    relatedNodes: []
+                                };
+                            }
+                            conceptMap[cleanWord].count++;
+                            conceptMap[cleanWord].relatedNodes.push(`source-${source.id}`);
+                        }
+                    }
+                });
+            });
+            
+            // Extract concepts from notes
+            notebook.notes.forEach(note => {
+                const words = note.content.split(/\s+/);
+                words.forEach(word => {
+                    // Look for microbiology-related terms
+                    const microbioTerms = ['bacteria', 'virus', 'genetic', 'plasmid', 'antibiotic', 'resistance', 'gene', 'dna', 'rna', 'protein', 'enzyme'];
+                    if (microbioTerms.some(term => word.toLowerCase().includes(term)) || 
+                        (word.length > 5 && /^[A-Z]/.test(word))) {
+                        const cleanWord = word.replace(/[^a-zA-Z]/g, '');
+                        if (cleanWord.length > 3) {
+                            if (!conceptMap[cleanWord]) {
+                                conceptMap[cleanWord] = {
+                                    id: cleanWord.toLowerCase(),
+                                    name: cleanWord,
+                                    count: 0,
+                                    relatedNodes: []
+                                };
+                            }
+                            conceptMap[cleanWord].count++;
+                            conceptMap[cleanWord].relatedNodes.push(`note-${note.id}`);
+                        }
+                    }
+                });
+            });
+            
+            // Only include concepts that appear multiple times
+            for (const key in conceptMap) {
+                if (conceptMap[key].count > 1) {
+                    concepts.push(conceptMap[key]);
+                }
+            }
+            
+            return concepts.slice(0, 10); // Limit to top 10 concepts
+        }
+        
+        function renderMindMap(nodes, links) {
+            const width = document.getElementById('mind-map').clientWidth;
+            const height = document.getElementById('mind-map').clientHeight;
+            
+            // Create SVG
+            const svg = d3.select("#mind-map")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height);
+            
+            // Add zoom behavior
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on("zoom", (event) => {
+                    g.attr("transform", event.transform);
+                });
+            
+            svg.call(zoom);
+            
+            const g = svg.append("g");
+            
+            // Create force simulation
+            const simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links).id(d => d.id).distance(100))
+                .force("charge", d3.forceManyBody().strength(-300))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("collision", d3.forceCollide().radius(d => d.size + 5));
+            
+            // Create links
+            const link = g.append("g")
+                .selectAll("line")
+                .data(links)
+                .enter()
+                .append("line")
+                .attr("class", "mind-map-link")
+                .attr("stroke-width", 2)
+                .attr("stroke", d => {
+                    switch (d.type) {
+                        case 'contains': return '#6366F1';
+                        case 'references': return '#F59E0B';
+                        case 'related': return '#8B5CF6';
+                        default: return '#CBD5E1';
+                    }
+                });
+            
+            // Create nodes
+            const node = g.append("g")
+                .selectAll("g")
+                .data(nodes)
+                .enter()
+                .append("g")
+                .attr("class", "mind-map-node")
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+            
+            // Add circles to nodes
+            node.append("circle")
+                .attr("r", d => d.size)
+                .attr("fill", d => d.color)
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 2);
+            
+            // Add icons to nodes based on type
+            node.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", 4)
+                .attr("font-family", "FontAwesome")
+                .attr("font-size", d => d.size / 2)
+                .attr("fill", "white")
+                .text(d => {
+                    switch (d.type) {
+                        case 'notebook': return '\uf518';
+                        case 'source': return '\uf1c1';
+                        case 'note': return '\uf249';
+                        case 'concept': return '\uf0eb';
+                        default: return '\uf111';
+                    }
+                });
+            
+            // Add labels to nodes
+            node.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", d => d.size + 15)
+                .attr("font-size", 12)
+                .attr("fill", "#333")
+                .text(d => d.name.length > 20 ? d.name.substring(0, 20) + '...' : d.name);
+            
+            // Add tooltip behavior
+            node.on("mouseover", function(event, d) {
+                const tooltip = document.getElementById('mind-map-tooltip');
+                let content = `<strong>${d.name}</strong><br>Type: ${d.type}`;
+                
+                if (d.data) {
+                    if (d.type === 'source') {
+                        content += `<br>Content: ${d.data.content.substring(0, 100)}...`;
+                    } else if (d.type === 'note') {
+                        content += `<br>Created: ${formatDate(d.data.date)}`;
+                    }
+                }
+                
+                tooltip.innerHTML = content;
+                tooltip.style.opacity = 1;
+                tooltip.style.left = (event.pageX + 10) + 'px';
+                tooltip.style.top = (event.pageY - 10) + 'px';
+                
+                // Highlight connected nodes
+                link.attr("stroke", l => {
+                    if (l.source.id === d.id || l.target.id === d.id) {
+                        return l.source.id === d.id ? l.target.color : l.source.color;
+                    }
+                    return '#CBD5E1';
+                }).attr("stroke-width", l => {
+                    return (l.source.id === d.id || l.target.id === d.id) ? 3 : 1;
+                });
+                
+                node.select("circle").attr("stroke", n => {
+                    const connected = links.some(l => 
+                        (l.source.id === d.id && l.target.id === n.id) || 
+                        (l.target.id === d.id && l.source.id === n.id)
+                    );
+                    return connected ? n.color : "#fff";
+                }).attr("stroke-width", n => {
+                    const connected = links.some(l => 
+                        (l.source.id === d.id && l.target.id === n.id) || 
+                        (l.target.id === d.id && l.source.id === n.id)
+                    );
+                    return connected ? 3 : 2;
+                });
+            });
+            
+            node.on("mousemove", function(event) {
+                const tooltip = document.getElementById('mind-map-tooltip');
+                tooltip.style.left = (event.pageX + 10) + 'px';
+                tooltip.style.top = (event.pageY - 10) + 'px';
+            });
+            
+            node.on("mouseout", function() {
+                const tooltip = document.getElementById('mind-map-tooltip');
+                tooltip.style.opacity = 0;
+                
+                // Reset link and node styles
+                link.attr("stroke", d => {
+                    switch (d.type) {
+                        case 'contains': return '#6366F1';
+                        case 'references': return '#F59E0B';
+                        case 'related': return '#8B5CF6';
+                        default: return '#CBD5E1';
+                    }
+                }).attr("stroke-width", 2);
+                
+                node.select("circle")
+                    .attr("stroke", "#fff")
+                    .attr("stroke-width", 2);
+            });
+            
+            // Add click behavior to navigate to relevant content
+            node.on("click", function(event, d) {
+                if (d.type === 'source') {
+                    // Extract source ID and navigate to sources section
+                    const sourceId = d.id.replace('source-', '');
+                    loadSource(sourceId);
+                    
+                    // Switch to sources section
+                    document.querySelectorAll('.nav-link').forEach(nl => nl.classList.remove('active'));
+                    document.querySelector('[data-section="sources"]').classList.add('active');
+                    document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+                    document.getElementById('sources-section').classList.add('active');
+                    document.getElementById('page-title').textContent = 'Sources';
+                    
+                    showToast(`Navigated to source: ${d.name}`);
+                } else if (d.type === 'note') {
+                    // Extract note ID and navigate to notes
+                    const noteId = d.id.replace('note-', '');
+                    loadNote(noteId);
+                    
+                    showToast(`Navigated to note: ${d.name}`);
+                }
+            });
+            
+            // Update positions on simulation tick
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+                
+                node
+                    .attr("transform", d => `translate(${d.x},${d.y})`);
+            });
+            
+            // Drag functions
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+            
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+            
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        }
+        
+        function autoLayoutMindMap() {
+            // Reset the simulation to auto-layout nodes
+            if (state.mindMapData) {
+                generateMindMap();
+                showToast('Mind map layout regenerated');
+            }
+        }
+        
+        function exportMindMap() {
+            if (!state.mindMapData) {
+                showToast('No mind map to export', 'error');
+                return;
+            }
+            
+            // Create a temporary SVG element for export
+            const svgElement = document.querySelector('#mind-map svg');
+            if (!svgElement) {
+                showToast('No mind map to export', 'error');
+                return;
+            }
+            
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            
+            const downloadLink = document.createElement('a');
+            downloadLink.href = url;
+            downloadLink.download = `${state.notebooks[state.currentNotebook].name}-mind-map.svg`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            showToast('Mind map exported as SVG');
+        }
+
+        // AI Chat Functions
+        function sendMessage() {
+            const message = document.getElementById('chat-input').value;
+            
+            if (!message) {
+                showToast('Please enter a message.', 'error');
+                return;
+            }
+            
+            // Add user message to chat
+            const chatMessages = document.getElementById('chat-messages');
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user';
+            userMessage.innerHTML = `<p>${message}</p>`;
+            chatMessages.appendChild(userMessage);
+            
+            // Clear input
+            document.getElementById('chat-input').value = '';
+            
+            // Show typing indicator
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'message assistant';
+            typingIndicator.innerHTML = `<p><i>AI is thinking...</i></p>`;
+            chatMessages.appendChild(typingIndicator);
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Generate AI response based on sources
+            setTimeout(() => {
+                // Remove typing indicator
+                chatMessages.removeChild(typingIndicator);
+                
+                // Generate AI response based on sources
+                const aiResponse = generateAIResponse(message);
+                const aiMessage = document.createElement('div');
+                aiMessage.className = 'message assistant';
+                
+                let messageHTML = `<p>${aiResponse.answer}</p>`;
+                
+                // Add citations if available
+                if (aiResponse.citations && aiResponse.citations.length > 0) {
+                    messageHTML += `<div class="message-citation">`;
+                    messageHTML += `<strong>Based on:</strong> ${aiResponse.citations.join('; ')}`;
+                    messageHTML += `</div>`;
+                }
+                
+                aiMessage.innerHTML = messageHTML;
+                chatMessages.appendChild(aiMessage);
+                
+                // Scroll to bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 1500);
+        }
+
+        function generateAIResponse(question) {
+            const notebook = state.notebooks[state.currentNotebook];
+            let answer = "I'm not sure how to answer that based on your current sources. ";
+            let citations = [];
+            
+            // Simple keyword matching for demo purposes
+            const lowerQuestion = question.toLowerCase();
+            
+            // Search through all sources for relevant information
+            for (const source of notebook.sources) {
+                const lowerContent = source.content.toLowerCase();
+                
+                // Check if the source content contains words from the question
+                const questionWords = lowerQuestion.split(/\s+/).filter(word => word.length > 3);
+                let matchCount = 0;
+                
+                for (const word of questionWords) {
+                    if (lowerContent.includes(word)) {
+                        matchCount++;
+                    }
+                }
+                
+                // If we found enough matches, use this source
+                if (matchCount >= Math.min(2, questionWords.length)) {
+                    // Extract relevant sentences
+                    const sentences = source.content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+                    const relevantSentences = [];
+                    
+                    for (const sentence of sentences) {
+                        const lowerSentence = sentence.toLowerCase();
+                        let sentenceMatchCount = 0;
+                        
+                        for (const word of questionWords) {
+                            if (lowerSentence.includes(word)) {
+                                sentenceMatchCount++;
+                            }
+                        }
+                        
+                        if (sentenceMatchCount > 0) {
+                            relevantSentences.push(sentence.trim());
+                            if (relevantSentences.length >= 2) break;
+                        }
+                    }
+                    
+                    if (relevantSentences.length > 0) {
+                        answer = "Based on your research, " + relevantSentences.join(' ') + " ";
+                        citations = source.citations.slice(0, 2);
+                        break;
+                    }
+                }
+            }
+            
+            // If no specific match, provide a general response
+            if (answer === "I'm not sure how to answer that based on your current sources. ") {
+                answer += "Try asking about specific concepts from your sources or request a summary of key concepts.";
+                
+                // If we have sources, suggest topics
+                if (notebook.sources.length > 0) {
+                    answer += " Based on your sources, you might ask about: ";
+                    const topics = [];
+                    
+                    for (const source of notebook.sources) {
+                        // Extract potential topics from source titles
+                        const titleWords = source.title.split(/\s+/);
+                        for (const word of titleWords) {
+                            if (word.length > 5 && !topics.includes(word.toLowerCase())) {
+                                topics.push(word.toLowerCase());
+                                if (topics.length >= 3) break;
+                            }
+                        }
+                        if (topics.length >= 3) break;
+                    }
+                    
+                    if (topics.length > 0) {
+                        answer += topics.join(', ') + ".";
+                    }
+                }
+            }
+            
+            return {
+                answer: answer,
+                citations: citations
+            };
+        }
+
+        function clearChat() {
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.innerHTML = `
+                <div class="message assistant">
+                    <p>Hello! I'm your microbiology research assistant. I can help you understand concepts from your sources, summarize key points, or answer specific questions about your research.</p>
+                    <p>What would you like to know about your ${state.notebooks[state.currentNotebook].name} research?</p>
+                </div>
+            `;
+            
+            showToast('Chat cleared');
+        }
+
+        function suggestQuestions() {
+            const chatMessages = document.getElementById('chat-messages');
+            const notebook = state.notebooks[state.currentNotebook];
+            
+            let questionsHTML = "<p>Based on your sources, here are some questions you might want to explore:</p><ul>";
+            
+            // Generate questions based on source content
+            const questions = [];
+            
+            for (const source of notebook.sources) {
+                // Extract key concepts from source title and content
+                const titleWords = source.title.split(/\s+/).filter(word => word.length > 5);
+                const contentSentences = source.content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+                
+                // Create questions based on title
+                if (titleWords.length > 0) {
+                    questions.push(`What is the significance of ${titleWords[0]} in ${notebook.name.toLowerCase()}?`);
+                }
+                
+                // Create questions based on content
+                for (let i = 0; i < Math.min(2, contentSentences.length); i++) {
+                    const sentence = contentSentences[i];
+                    const words = sentence.split(/\s+/).filter(word => word.length > 4);
+                    if (words.length > 5) {
+                        questions.push(`How does ${words[0]} relate to ${notebook.name.toLowerCase()}?`);
+                        break;
+                    }
+                }
+                
+                if (questions.length >= 3) break;
+            }
+            
+            // Add some generic questions if we don't have enough
+            while (questions.length < 3) {
+                questions.push(`What are the key mechanisms in ${notebook.name.toLowerCase()}?`);
+            }
+            
+            questions.forEach(q => {
+                questionsHTML += `<li>${q}</li>`;
+            });
+            questionsHTML += "</ul><p>Feel free to ask any of these or your own questions!</p>";
+            
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'message assistant';
+            aiMessage.innerHTML = questionsHTML;
+            chatMessages.appendChild(aiMessage);
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            showToast('Suggested questions added to chat');
+        }
+
+        // Local Storage Functions
+        function saveToLocalStorage() {
+            localStorage.setItem('microNoteData', JSON.stringify(state));
+        }
+
+        function loadFromLocalStorage() {
+            const savedData = localStorage.getItem('microNoteData');
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                
+                // Merge saved data with current state
+                Object.assign(state, parsedData);
+                
+                // Update UI to reflect loaded data
+                document.getElementById('page-title').textContent = 
+                    state.notebooks[state.currentNotebook].name + ' Notebook';
+            }
+        }
+
+        // Utility Functions
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
+        }
+    </script>
+</body>
+</html>
